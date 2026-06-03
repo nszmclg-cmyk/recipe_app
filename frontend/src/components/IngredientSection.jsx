@@ -59,7 +59,7 @@ export function IngredientSection({
 
   return (
     <section>
-      <h1>食材一覧</h1>
+      <h1>食材一覧!</h1>
 
       <input
         type="text"
