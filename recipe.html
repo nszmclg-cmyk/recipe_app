@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レシピ一覧</title>
+    <link rel="stylesheet" href="recipe.css">
+</head>
+<body>
+    <h1>食材一覧</h1>
+    <input type="text" id="inputText" placeholder="例：卵">
+    <button onclick="addItem()">追加</button>
+    <ul id="list"></ul>
+
+    <hr>
+
+    <h1>レシピ一覧</h1>
+    <input type="text" id="recipeName" placeholder="レシピ名">
+    <input type="text" id="recipeIngredients" placeholder="材料を / 区切りで入力">
+    <button onclick="addRecipe()">追加</button>
+
+    <ul class="recipe-list" id="recipeList"></ul>
+
+    <script>
+    let items = [];
+    let recipes = [];
+
+    const list = document.getElementById("list");
+    const recipeList = document.getElementById("recipeList");
+    const recipeName = document.getElementById("recipeName");
+    const recipeIngredients = document.getElementById("recipeIngredients");
+
+    window.onload = async function() {
+        await loadItems();
+        await loadRecipes();
+    };
+
+    async function loadItems() {
+        const response = await fetch("http://localhost:3001/ingredients");
+        const data = await response.json();
+        items = data;
+        renderItems();
+    }
+
+    async function addItem() {
+        const input = document.getElementById("inputText");
+        const text = input.value.trim();
+
+        if (text === "") return;
+
+        try {
+            const response = await fetch("http://localhost:3001/ingredients", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name: text })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error || "食材の保存に失敗しました");
+                return;
+            }
+
+            input.value = "";
+            await loadItems();
+            renderRecipes();
+        } catch (error) {
+            console.error(error);
+            alert("通信に失敗しました。APIサーバーが起動しているか確認してください。");
+        }
+    }
+
+    async function deleteItem(id) {
+        const response = await fetch(`http://localhost:3001/ingredients/${id}`, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            alert("食材の削除に失敗しました");
+            return;
+        }
+
+        await loadItems();
+        renderRecipes();
+    }
+
+    function renderItems() {
+        list.innerHTML = items.map((item) => `
+            <li class="ingredient-item">
+                <label>
+                    <input type="checkbox" value="${item.name}" onchange="renderRecipes()">
+                    ${item.name}
+                </label>
+                <button class="delete-button" onclick="deleteItem(${item.id})">削除</button>
+            </li>
+        `).join("");
+    }
+
+    function getSelectedIngredients() {
+        const checkedIngredients = document.querySelectorAll('#list input[type="checkbox"]:checked');
+        return Array.from(checkedIngredients).map(checkbox => checkbox.value);
+    }
+
+    async function loadRecipes() {
+        const response = await fetch("http://localhost:3001/recipes");
+        const data = await response.json();
+        recipes = data;
+        renderRecipes();
+    }
+
+    async function addRecipe() {
+        const newRecipe = {
+            name: recipeName.value.trim(),
+            ingredients: recipeIngredients.value
+                .split("/")
+                .map(item => item.trim())
+                .filter(item => item !== "")
+        };
+
+        if (newRecipe.name === "" || newRecipe.ingredients.length === 0) {
+            return;
+        }
+
+        const response = await fetch("http://localhost:3001/recipes", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(newRecipe)
+        });
+
+        if (!response.ok) {
+            alert("レシピの保存に失敗しました");
+            return;
+        }
+
+        recipeName.value = "";
+        recipeIngredients.value = "";
+        await loadRecipes();
+    }
+
+    async function deleteRecipe(id) {
+        const response = await fetch(`http://localhost:3001/recipes/${id}`, {
+            method: "DELETE"
+        });
+
+        if (!response.ok) {
+            alert("レシピの削除に失敗しました");
+            return;
+        }
+
+        await loadRecipes();
+    }
+
+    function renderRecipes() {
+        const selectedIngredients = getSelectedIngredients();
+
+        const filteredRecipes = recipes.filter(recipe => {
+            if (selectedIngredients.length === 0) {
+                return true;
+            }
+
+            return selectedIngredients.every(ingredient =>
+                recipe.ingredients.includes(ingredient)
+            );
+        });
+
+        recipeList.innerHTML = filteredRecipes.map(recipe => `
+            <li class="recipe-item">
+                <div class="recipe-text">
+                    <span class="recipe-title">${recipe.name}</span>
+                    <span class="recipe-ingredients">${recipe.ingredients.join(" / ")}</span>
+                </div>
+                <button class="delete-button" onclick="deleteRecipe(${recipe.id})">削除</button>
+            </li>
+        `).join("");
+    }
+    </script>
+</body>
+</html>
