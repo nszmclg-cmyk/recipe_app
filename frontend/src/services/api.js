@@ -55,6 +55,23 @@ export async function addRecipe(recipe) {
   return response.json();
 }
 
+export async function classifyDishType(recipe) {
+  const response = await fetch(`${BASE_URL}/classify-dish-type`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(recipe)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "料理区分の判定に失敗しました");
+  }
+
+  return response.json();
+}
+
 export async function deleteRecipe(id) {
   const response = await fetch(`${BASE_URL}/recipes/${id}`, {
     method: "DELETE"

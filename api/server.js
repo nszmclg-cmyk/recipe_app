@@ -1,10 +1,29 @@
 import express from "express";
 import cors from "cors";
 import sqlite3 from "sqlite3";
+import {
+  BedrockRuntimeClient,
+  ConverseCommand
+} from "@aws-sdk/client-bedrock-runtime";
 
 const app = express();
 const port = 3001;
 const db = new sqlite3.Database("./recipes.db");
+const bedrock = new BedrockRuntimeClient({
+  region: process.env.AWS_REGION || "ap-northeast-1"
+});
+
+function resolveBedrockModelId() {
+  const modelId =
+    process.env.BEDROCK_MODEL_ID ||
+    "global.anthropic.claude-haiku-4-5-20251001-v1:0";
+
+  if (modelId === "anthropic.claude-haiku-4-5-20251001-v1:0") {
+    return "global.anthropic.claude-haiku-4-5-20251001-v1:0";
+  }
+
+  return modelId;
+}
 
 app.use(cors());
 app.use(express.json());
@@ -14,9 +33,16 @@ db.serialize(() => {
     CREATE TABLE IF NOT EXISTS recipes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      ingredients TEXT NOT NULL
+      ingredients TEXT NOT NULL,
+      dish_type TEXT
     )
   `);
+
+  db.run(`ALTER TABLE recipes ADD COLUMN dish_type TEXT`, (err) => {
+    if (err && !err.message.includes("duplicate column name")) {
+      console.error("recipesテーブル更新エラー", err);
+    }
+  });
 
   db.run(`
     CREATE TABLE IF NOT EXISTS ingredients (
@@ -46,6 +72,47 @@ db.serialize(() => {
 
 app.get("/", (req, res) => {
   res.send("API server is running");
+});
+
+app.post("/classify-dish-type", async (req, res) => {
+  const { name, ingredients } = req.body;
+
+  if (!name || !Array.isArray(ingredients) || ingredients.length === 0) {
+    res.status(400).json({ error: "name と ingredients は必須です" });
+    return;
+  }
+
+  const prompt = `
+次の料理を「主食」「主菜」「副菜」のどれか1語だけで判定してください。
+必ず次の3択のどれかだけを返してください: 主食 / 主菜 / 副菜
+
+料理名: ${name}
+材料: ${ingredients.join("、")}
+  `.trim();
+
+  try {
+    const command = new ConverseCommand({
+      modelId: resolveBedrockModelId(),
+      messages: [
+        {
+          role: "user",
+          content: [{ text: prompt }]
+        }
+      ]
+    });
+
+    const response = await bedrock.send(command);
+    const text = response.output?.message?.content?.[0]?.text?.trim();
+
+    let dishType = "副菜";
+    if (text.includes("主食")) dishType = "主食";
+    if (text.includes("主菜")) dishType = "主菜";
+
+    res.json({ dishType });
+  } catch (error) {
+    console.error("Bedrock classify error:", error);
+    res.status(500).json({ error: "料理区分の自動判定に失敗しました" });
+  }
 });
 
 app.get("/ingredients", (req, res) => {
@@ -117,7 +184,8 @@ app.get("/recipes", (req, res) => {
     const recipes = rows.map((row) => ({
       id: row.id,
       name: row.name,
-      ingredients: JSON.parse(row.ingredients)
+      ingredients: JSON.parse(row.ingredients),
+      dishType: row.dish_type
     }));
 
     res.json(recipes);
@@ -125,15 +193,15 @@ app.get("/recipes", (req, res) => {
 });
 
 app.post("/recipes", (req, res) => {
-  const { name, ingredients } = req.body;
+  const { name, ingredients, dishType } = req.body;
 
-  if (!name || !Array.isArray(ingredients) || ingredients.length === 0) {
-    res.status(400).json({ error: "name と ingredients は必須です" });
+  if (!name || !Array.isArray(ingredients) || ingredients.length === 0 || !dishType) {
+    res.status(400).json({ error: "name と ingredients と dishType は必須です" });
     return;
   }
 
-  const sql = "INSERT INTO recipes (name, ingredients) VALUES (?, ?)";
-  const params = [name, JSON.stringify(ingredients)];
+  const sql = "INSERT INTO recipes (name, ingredients, dish_type) VALUES (?, ?, ?)";
+  const params = [name, JSON.stringify(ingredients), dishType];
 
   db.run(sql, params, function (err) {
     if (err) {
@@ -144,7 +212,8 @@ app.post("/recipes", (req, res) => {
     res.status(201).json({
       id: this.lastID,
       name,
-      ingredients
+      ingredients,
+      dishType
     });
   });
 });
