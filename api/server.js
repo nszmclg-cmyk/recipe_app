@@ -105,8 +105,8 @@ app.post("/classify-dish-type", async (req, res) => {
     const text = response.output?.message?.content?.[0]?.text?.trim();
 
     let dishType = "副菜";
-    if (text === "主食") dishType = "主食";
-    if (text === "主菜") dishType = "主菜";
+    if (text.includes("主食")) dishType = "主食";
+    if (text.includes("主菜")) dishType = "主菜";
 
     res.json({ dishType });
   } catch (error) {
