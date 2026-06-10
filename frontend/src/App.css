@@ -2,10 +2,17 @@ body {
   font-family: sans-serif;
   margin: 30px;
   line-height: 1.6;
+  padding-right: 230px;
+  padding-bottom: 230px;
+  box-sizing: border-box;
 }
 
 .page {
   display: block;
+}
+
+.content-column {
+  min-width: 0;
 }
 
 section {
@@ -44,6 +51,10 @@ button {
 
 button:hover {
   background: #555;
+}
+
+.classify-button {
+  margin-right: 8px;
 }
 
 #list {
@@ -88,9 +99,9 @@ button:hover {
 .recipe-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
-  width: calc(50% - 6px);
+  width: 100%;
   padding: 12px;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -101,6 +112,15 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .recipe-title {
@@ -113,8 +133,34 @@ button:hover {
 }
 
 .recipe-dish-type {
-  color: #2563eb;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.recipe-dish-type-主食 {
+  background: #fff3cd;
+  color: #8a5a00;
+}
+
+.recipe-dish-type-主菜 {
+  background: #fde2e2;
+  color: #b42318;
+}
+
+.recipe-dish-type-副菜 {
+  background: #dff6dd;
+  color: #166534;
+}
+
+.recipe-dish-type-unknown {
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .delete-button {
@@ -130,7 +176,211 @@ button:hover {
   background: #ea4b46;
 }
 
+.tray-button {
+  background: #2563eb;
+  flex-shrink: 0;
+}
+
+.tray-button:hover {
+  background: #1d4ed8;
+}
+
+.tray-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 190px;
+  z-index: 20;
+}
+
+.tray-header {
+  margin-bottom: 8px;
+}
+
+.tray-header h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.tray-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.tray-error-message {
+  margin-top: 6px;
+  color: #b42318;
+  font-size: 10px;
+}
+
+.tray-board {
+  position: relative;
+  min-height: 230px;
+  padding: 8px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.5), transparent 40%),
+    linear-gradient(145deg, #9c5f2b, #7a471f);
+  box-shadow:
+    inset 0 0 0 5px rgba(99, 57, 23, 0.35),
+    0 12px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tray-slot {
+  position: absolute;
+}
+
+.tray-slot-主食 {
+  left: 50%;
+  width: 88px;
+  transform: translateX(-50%);
+  bottom: 8px;
+}
+
+.tray-slot-主菜 {
+  top: 10px;
+  left: 8px;
+  width: 74px;
+}
+
+.tray-slot-副菜 {
+  top: 10px;
+  right: 8px;
+  width: 74px;
+}
+
+.tray-slot-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: 9px;
+  font-weight: 700;
+  color: #5b3316;
+}
+
+.tray-plate {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  padding: 8px;
+  background:
+    radial-gradient(circle at 50% 42%, #ffffff 0%, #faf6ef 58%, #ddd3c8 72%, #f8f4ec 100%);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.75),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.08),
+    0 6px 12px rgba(70, 35, 10, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tray-dish {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.tray-dish-image {
+  width: 72%;
+  max-height: 72%;
+  object-fit: cover;
+  border-radius: 50%;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+}
+
+.tray-dish-image-button {
+  width: 72%;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.tray-dish-image-button:hover {
+  background: transparent;
+}
+
+.tray-dish-image-button .tray-dish-image {
+  width: 100%;
+  max-height: none;
+  display: block;
+}
+
+.tray-dish-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #f7f1e3, #ebe2cf);
+  color: #7a6448;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
+}
+
+.tray-dish-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #3f2a19;
+}
+
+.tray-placeholder {
+  max-width: 72%;
+  text-align: center;
+  color: #7c6b5e;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
 p {
   margin-top: 8px;
   color: #d13c3c;
+}
+
+@media (max-width: 1100px) {
+  body {
+    padding-right: 190px;
+    padding-bottom: 190px;
+  }
+
+  .tray-panel {
+    right: 12px;
+    bottom: 12px;
+    width: 160px;
+  }
+
+  .tray-board {
+    min-height: 180px;
+  }
+
+  .tray-slot-主食 {
+    width: 72px;
+  }
+
+  .tray-slot-主菜,
+  .tray-slot-副菜 {
+    width: 60px;
+  }
+}
+
+@media (max-width: 720px) {
+  body {
+    padding-right: 24px;
+    padding-bottom: 220px;
+  }
+
+  .tray-panel {
+    width: 170px;
+  }
 }

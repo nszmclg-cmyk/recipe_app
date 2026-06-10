@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 const db = new sqlite3.Database("./recipes.db");
 const bedrock = new BedrockRuntimeClient({
   region: process.env.AWS_REGION || "ap-northeast-1"
@@ -23,6 +23,61 @@ function resolveBedrockModelId() {
   }
 
   return modelId;
+}
+
+function buildDishImageSystemPrompt() {
+  return [
+    "You generate only valid, self-contained SVG markup.",
+    "Never output markdown, explanations, XML declarations, or code fences.",
+    "The SVG must be visually appealing, compact, and render correctly in a browser img tag.",
+    "Prefer simple geometric shapes and layered fills over overly complex path data."
+  ].join(" ");
+}
+
+function buildDishTypeStyleGuide(dishType) {
+  switch (dishType) {
+    case "主食":
+      return "The dish should feel filling and carb-forward, such as rice, noodles, or bread-like elements with warm beige, white, golden, or brown tones.";
+    case "主菜":
+      return "The dish should emphasize a central protein with a richer, heartier presentation using warm browns, reds, orange highlights, and a few garnish colors.";
+    case "副菜":
+    default:
+      return "The dish should feel lighter and vegetable-forward with smaller portions, more greens, yellows, and fresh accent colors.";
+  }
+}
+
+function buildDishImagePrompt(name, dishType) {
+  return [
+    `Create one top-down SVG illustration of a plated Japanese ${dishType} dish named "${name}".`,
+    "The SVG must use viewBox=\"0 0 512 512\" and fit comfortably inside the frame.",
+    "Draw exactly one round white plate centered in the image with a subtle rim or soft shadow.",
+    "Place the food fully inside the plate with a balanced composition and clear separation between ingredients.",
+    "Make the food look appetizing and recognizable as cooked Japanese home cooking rather than abstract art.",
+    buildDishTypeStyleGuide(dishType),
+    "Use 6 to 12 major visible food shapes with layered colors for depth.",
+    "Include small garnish or sauce accents only if they support the dish.",
+    "Avoid text, logos, utensils, tables, backgrounds, people, and decorative frames.",
+    "Use only safe SVG elements such as svg, g, path, circle, ellipse, rect, defs, linearGradient, and radialGradient.",
+    "Do not use script, foreignObject, external images, CSS imports, or event handlers.",
+    "Return only the final SVG markup."
+  ].join(" ");
+}
+
+function extractSvgMarkup(text) {
+  if (!text) {
+    return "";
+  }
+
+  const trimmed = text.trim();
+  const fencedMatch = trimmed.match(/```(?:svg)?\s*([\s\S]*?)```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : trimmed;
+  const svgMatch = candidate.match(/<svg[\s\S]*<\/svg>/i);
+
+  return svgMatch ? svgMatch[0].trim() : "";
+}
+
+function toSvgDataUrl(svgMarkup) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`;
 }
 
 app.use(cors());
@@ -93,6 +148,16 @@ app.post("/classify-dish-type", async (req, res) => {
   try {
     const command = new ConverseCommand({
       modelId: resolveBedrockModelId(),
+      system: [
+        {
+          text: buildDishImageSystemPrompt()
+        }
+      ],
+      inferenceConfig: {
+        maxTokens: 1200,
+        temperature: 0.2,
+        topP: 0.9
+      },
       messages: [
         {
           role: "user",
@@ -102,16 +167,62 @@ app.post("/classify-dish-type", async (req, res) => {
     });
 
     const response = await bedrock.send(command);
-    const text = response.output?.message?.content?.[0]?.text?.trim();
+    const text = response.output?.message?.content?.[0]?.text?.trim() || "";
 
     let dishType = "副菜";
-    if (text.includes("主食")) dishType = "主食";
-    if (text.includes("主菜")) dishType = "主菜";
+
+    if (text.includes("主食")) {
+      dishType = "主食";
+    } else if (text.includes("主菜")) {
+      dishType = "主菜";
+    } else if (text.includes("副菜")) {
+      dishType = "副菜";
+    }
 
     res.json({ dishType });
   } catch (error) {
     console.error("Bedrock classify error:", error);
     res.status(500).json({ error: "料理区分の自動判定に失敗しました" });
+  }
+});
+
+app.post("/generate-dish-image", async (req, res) => {
+  const { name, dishType } = req.body;
+
+  if (!name || !dishType) {
+    res.status(400).json({ error: "name と dishType は必須です" });
+    return;
+  }
+
+  const prompt = buildDishImagePrompt(name, dishType);
+
+  try {
+    const command = new ConverseCommand({
+      modelId: resolveBedrockModelId(),
+      messages: [
+        {
+          role: "user",
+          content: [{ text: prompt }]
+        }
+      ]
+    });
+
+    const response = await bedrock.send(command);
+    const svgMarkup = extractSvgMarkup(
+      response.output?.message?.content?.[0]?.text
+    );
+
+    if (!svgMarkup) {
+      res.status(500).json({ error: "料理SVGの生成結果が取得できませんでした" });
+      return;
+    }
+
+    res.json({
+      imageUrl: toSvgDataUrl(svgMarkup)
+    });
+  } catch (error) {
+    console.error("Bedrock SVG error:", error);
+    res.status(500).json({ error: "料理SVGの生成に失敗しました" });
   }
 });
 
