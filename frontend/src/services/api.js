@@ -1,4 +1,6 @@
-const BASE_URL = "http://localhost:3001";
+const BASE_URL = import.meta.env.DEV
+  ? "http://localhost:3001"
+  : "/api";
 
 export async function getIngredients() {
   const response = await fetch(`${BASE_URL}/ingredients`);
@@ -67,6 +69,23 @@ export async function classifyDishType(recipe) {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || "料理区分の判定に失敗しました");
+  }
+
+  return response.json();
+}
+
+export async function generateDishImage(recipe) {
+  const response = await fetch(`${BASE_URL}/generate-dish-image`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(recipe)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "料理画像の生成に失敗しました");
   }
 
   return response.json();

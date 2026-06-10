@@ -6,7 +6,7 @@ import {
   classifyDishType
 } from "../services/api";
 
-export function RecipeSection({ selectedIngredients }) {
+export function RecipeSection({ selectedIngredients, onPlaceRecipe }) {
   const [recipes, setRecipes] = useState([]);
   const [recipeName, setRecipeName] = useState("");
   const [recipeIngredients, setRecipeIngredients] = useState("");
@@ -112,7 +112,11 @@ export function RecipeSection({ selectedIngredients }) {
         <option value="主菜">主菜</option>
         <option value="副菜">副菜</option>
       </select>
-      <button type="button" onClick={handleClassifyDishType}>
+      <button
+        type="button"
+        className="classify-button"
+        onClick={handleClassifyDishType}
+      >
         自動判定
       </button>
       <button onClick={handleSubmit}>追加</button>
@@ -122,8 +126,14 @@ export function RecipeSection({ selectedIngredients }) {
         {filteredRecipes.map((recipe) => (
           <li key={recipe.id} className="recipe-item">
             <div className="recipe-text">
-              <span className="recipe-title">{recipe.name}</span>
-              <span className="recipe-dish-type">{recipe.dishType || "未設定"}</span>
+              <div className="recipe-heading">
+                <span className="recipe-title">{recipe.name}</span>
+                <span
+                  className={`recipe-dish-type recipe-dish-type-${recipe.dishType || "unknown"}`}
+                >
+                  {recipe.dishType || "未設定"}
+                </span>
+              </div>
               <span className="recipe-ingredients">
                 {recipe.ingredients.join(" / ")}
               </span>
@@ -133,6 +143,12 @@ export function RecipeSection({ selectedIngredients }) {
               onClick={() => handleDeleteRecipe(recipe.id)}
             >
               削除
+            </button>
+            <button
+              className="tray-button"
+              onClick={() => onPlaceRecipe(recipe)}
+            >
+              お盆に置く
             </button>
           </li>
         ))}
