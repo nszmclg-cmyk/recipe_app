@@ -34,6 +34,13 @@ function buildDishImageSystemPrompt() {
   ].join(" ");
 }
 
+function buildDishTypeSystemPrompt() {
+  return [
+    "You classify Japanese dishes into exactly one category.",
+    "Return only one of these labels with no explanation: 主食, 主菜, 副菜."
+  ].join(" ");
+}
+
 function buildDishTypeStyleGuide(dishType) {
   switch (dishType) {
     case "主食":
@@ -150,13 +157,12 @@ app.post("/classify-dish-type", async (req, res) => {
       modelId: resolveBedrockModelId(),
       system: [
         {
-          text: buildDishImageSystemPrompt()
+          text: buildDishTypeSystemPrompt()
         }
       ],
       inferenceConfig: {
         maxTokens: 1200,
-        temperature: 0.2,
-        topP: 0.9
+        temperature: 0.2
       },
       messages: [
         {
