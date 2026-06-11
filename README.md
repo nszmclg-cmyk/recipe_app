@@ -13,6 +13,9 @@ https://my-recipe.tatukotatu.com
 当初は HTML + JavaScript で実装し、その後 React に書き換えることで、状態管理やコンポーネント設計も学びました。  
 現在は AI 機能も組み込み、食材管理アプリに「料理区分の自動判定」と「料理ビジュアル生成」を追加しています。
 
+## 構成図
+<img width="774" height="511" alt="レシピアプリ構成図 drawio" src="https://github.com/user-attachments/assets/7d52e07c-84fe-4760-9066-6f760f640718" />
+
 ## 使用技術
 ### フロントエンド
 - React
