@@ -1,4 +1,5 @@
 # recipe_apps
+https://github.com/user-attachments/assets/b7173e71-6d18-4311-88cc-c208d97b5d60
 
 ## 概要
 食材を管理し、選択した食材を使うレシピを絞り込みながら、料理をお盆に並べて献立を考えられる Web アプリです。  
