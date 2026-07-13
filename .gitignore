@@ -1,2 +1,7 @@
 node_modules
 .DS_Store
+
+# Frontend local env
+frontend/.env.development
+
+php_api/vendor/
